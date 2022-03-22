@@ -1,0 +1,47 @@
+service: project-402-az
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: dev
+  region: eu-west-1
+  environment:
+    DYNAMODB_TABLE_NAME: ${self:custom.vidoesTableName}
+
+custom:
+  vidoesTableName: vidoes-table-${self:provider.stage}
+
+plugins:
+  - serverless-iam-roles-per-function
+
+functions:
+  getPost:
+    handler: api.getVideo
+    name: get-video
+    memorySize: 128 # mb
+    timeout: 5 #seconds
+    events:
+      - http:
+          path: video/{videoId}
+          method: GET
+      iamRoleStatements:
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:GetItem"
+          Resource: !GetAtt VidoesTable.Arn
+
+resources:
+  Resources:
+    VidoesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.vidoesTableName}
+        AttributeDefinitions:
+          - AttributeName: videoId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: videoId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
